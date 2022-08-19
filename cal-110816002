@@ -1,0 +1,372 @@
+<%@ page contentType="text/html; charset=Big5"%>
+<%--姓名: 張甄真
+    學號: 110816002
+    刻出MicroSoft XP小算盤介面，並模擬小算盤的顏色及按鈕擺放位置等，提供使用者基本的整數加減乘除
+    運算功能並輸出運算結果，且根據此小算盤沒有四則運算原則，故操作為兩兩數值直接運算。也提供C、CE、
+    Del的按鍵功能(C清除全部運算、CE清除當次輸入、Del清除最後一個輸入的數字)，且在尚未輸入數字前按
+    下任何功能鍵會提醒使用者輸入錯誤。
+    此程式可支援加減乘除小數點運算，包括直接輸入包含小數點的數值做運算及運算結果可為小數等，能正常顯示
+    以及搭配功能鍵使用。另外提供特殊運算(%、倒數、根號、平方)，平方可與上述做混合運算(但小數只取到整數)，
+    %、倒數、根號則只能做單次運算，並直接顯示結果於介面上，按下一次欲計算數字即可直接進行下一次的計算。--%>
+<%--自評：
+      1.支援整數加減乘除計算 (+70%)
+      2.支援小數 (+20%)
+      3.其他特別有用功能 (+10%) (提供C、CE、Del及%、倒數、根號、平方運算功能)
+      故自評為100分--%>
+
+<head>
+<title>calculator</title>
+</head>
+<body>
+<%!
+    int counter=0; //計算輸入幾次數字
+    int counterop=0; //計算輸入幾次opertor
+    boolean state=true; //做除法運算時，分母是否為0的判斷紀錄
+    String op; //紀錄上一次輸入的operator
+    float Cnum[]=new float[12]; //紀錄輸入每一次輸入的數字，根據位置乘10000...1000、100、10、1
+    float firstnum,secondnum=0; //紀錄實際運算的數字
+    float outcome=0; //運算結果
+    String answer; //輸出結果到介面
+
+    //把一個數字一個數字組合起來成一個operatand
+    public float tonumber(float Cnum[],int counter){
+        float temp=0;
+        boolean smallnum=false;
+        int val=0;
+        for(int i=0;i<counter;i++){ //判斷是否有小數點
+            if(Cnum[i]==11){
+                val=i;
+                smallnum=true; //若有，設為true
+            }
+        }
+        //有小數點則分開加總數字，先算小數點前，再加總小數點後
+        //設val為陣列存小數點(數值為11)的索引值
+        if(smallnum==true){
+            int Ctemp=0;
+            for(int i=0;i<val;i++){
+                Cnum[i]=Cnum[i]*(int)Math.pow(10,val-1-i);
+                temp+=Cnum[i];
+            }
+            for(int i=val+1;i<counter;i++){
+                Ctemp+=1;
+                Cnum[i]=Cnum[i]/(float)Math.pow(10,Ctemp);
+                temp+=Cnum[i];
+            }
+        }
+        //沒有小數點則做一般加總運算
+        if(smallnum==false){
+            for(int i=0;i<counter;i++){
+                Cnum[i]=Cnum[i]*(int)Math.pow(10,counter-1-i);
+                temp+=Cnum[i];
+            }
+        }
+        return temp;
+    }
+
+    //將處理過後的數值兩兩做適當的運算
+    public float out(float x){
+        float temp=x;
+        if(counterop==1){
+            firstnum=temp;
+        }
+        else{
+            secondnum=temp;
+
+            //運算
+            if(op=="+"){
+                outcome=firstnum+secondnum;
+                firstnum=outcome;
+            }
+            if(op=="-"){
+                outcome=firstnum-secondnum;
+                firstnum=outcome;
+            }
+            if(op=="*"){
+                outcome=firstnum*secondnum;
+                firstnum=outcome;
+            }
+            if(op=="/"){
+                if(secondnum==0){ //分母不得為0的判斷
+                    state=false; //設狀態為false表示在除法時，分母為0
+                    outcome=0;
+                    counterop=0;
+
+                }else{
+                    outcome=firstnum/secondnum;
+                    firstnum=outcome;
+                }
+            }
+        }
+        for(int i=0;i<11;i++)
+            Cnum[i]=0;
+        //要清除Cnum的值，因為要存下一次輸入的數字
+        counter=0;
+        return outcome;
+    }
+    //平方函數
+    public float square(float x){
+        float temp=x*x;
+        return temp;
+    }
+%>
+<%
+    String btnop=request.getParameter("op");
+    String btnn=request.getParameter("n");
+    if(counter==0){
+        answer="0.";
+    }
+    try{
+        if(btnn!=null){
+            if(counter==0){
+                answer="";
+            }
+            answer=answer+btnn;
+            Cnum[counter]=Integer.parseInt(btnn);
+            counter+=1; //如果是數字才加1，且Cnum陣列從索引值0開始存放
+        }
+    }catch(Exception E){}
+
+    if(btnop!=null && btnop.equals("C")){//清除所有計算結果
+        counter=0;
+        counterop=0;
+        answer="0.";
+        for(int i=0;i<12;i++){
+            Cnum[i]=0;
+        }
+        firstnum=secondnum=0;
+        op=null;
+    }
+    if(btnop!=null && btnop.equals("CE")){ //去掉當前輸入CE
+        answer="";
+        counter=0;
+    }
+    if(btnop!=null && btnop.equals("Del")){ //去掉一個Del
+        if(counter==0){ //如果未做任何輸入，表示不需要Del
+            answer="error";
+        }
+        else{ //顯示刪掉最後輸入的數字，並讓Cnum[刪除值的索引值]存的值為0
+            answer="";
+            for(int i=0;i<counter-1;i++){
+                if(Cnum[i]==11){ //判斷是否為小數點的情況
+                    answer=answer+".";
+                }
+                else{
+                    answer=answer+(int)Cnum[i];
+                }
+            }
+            Cnum[counter-1]=0;
+            counter-=1;
+        }
+    }
+
+    if(btnop!=null && btnop.equals("=")){ //=
+        if(counterop==0){
+            answer="error";
+        }
+        else{
+            counterop+=1;
+            float temp=tonumber(Cnum,counter);
+            out(temp);
+            if(state==true){ //考慮是否除法分母為0(true表示分母不為0)
+                answer=Float.toString(outcome);
+            }
+            else{
+                answer="error";
+                state=true;
+            }
+            counterop=0; //清除紀錄，重新開始小算盤
+        }
+    }
+
+    if(btnop!=null && btnop.equals("+")){ //+
+        if(counter==0){ //錯誤判斷，第一個輸入不為+
+            answer="error";
+        }
+        else{
+            answer="+";
+            counterop+=1;
+            float temp=tonumber(Cnum,counter);
+            out(temp);
+            op="+";
+        }
+    }
+
+    if(btnop!=null && btnop.equals("-")){ //-
+        if(counter==0){ //錯誤判斷，第一個輸入不為-
+            answer="error";
+        }
+        else{
+            answer="-";
+            counterop+=1;
+            float temp=tonumber(Cnum,counter);
+            out(temp);
+            op="-";
+        }
+    }
+    
+    if(btnop!=null && btnop.equals("*")){ //*
+        if(counter==0){ //錯誤判斷，第一個輸入不為*
+            answer="error";
+        }
+        else{
+            answer="*";
+            counterop+=1;
+            float temp=tonumber(Cnum,counter);
+            out(temp);
+            op="*";
+        }
+    }
+
+    if(btnop!=null && btnop.equals("/")){ //÷
+        if(counter==0){ //錯誤判斷，第一個輸入不為÷
+            answer="error";
+        }
+        else{
+            answer="/";
+            counterop+=1;
+            float temp=tonumber(Cnum,counter);
+            out(temp);
+            op="/";
+        }
+    }
+
+    if(btnop!=null && btnop.equals("x^2")){ //平方
+        if(counter==0){ //錯誤判斷，第一個輸入不為x^2
+            answer="error";
+        }
+        else{
+            answer="";
+            float temp=tonumber(Cnum,counter);
+            float realSquare=square(temp);
+            int s=Integer.toString((int)realSquare).length();
+            int squarenum[]=new int[12];
+            //將平方後的數字拆開存進陣列
+            //例: 123拆成 1、2、3分別放進陣列讓下一個operator做運算
+            for(int i=s-1;i>=0;i--){
+                int y=(int)realSquare;
+                y=y%10;
+                realSquare=realSquare/10;
+                squarenum[i]=y;
+            }
+            for(int i=0;i<s;i++){ //顯示
+                Cnum[i]=squarenum[i];
+                answer=answer+squarenum[i];
+            }
+            counter=s;
+        }
+    }
+
+    if(btnop!=null && btnop.equals(".")){ //小數點.
+        if(counter==0){ //錯誤判斷，第一個輸入不為小數點
+            answer="error";
+        }
+        else{
+            for(int i=0;i<counter-1;i++){
+                answer=answer+Float.toString(Cnum[i]);
+            }
+            answer=answer+".";
+            Cnum[counter]=11; //若輸入小數點，則存一個標示在陣列裡讓函數判斷
+            counter+=1;
+        }
+    }
+
+    //單次運算
+    if(btnop!=null && btnop.equals("%")){ //x/100
+        answer="";
+        float temp=tonumber(Cnum,counter);
+        float re=temp/100;
+        answer=Float.toString(re)+" End";
+        counter=0;
+    }
+    if(btnop!=null && btnop.equals("1/x")){ //x的倒數
+        answer="";
+        float temp=tonumber(Cnum,counter);
+        float re=1/temp;
+        answer=Float.toString(re)+" End";
+        counter=0;
+    }
+    if(btnop!=null && btnop.equals("root")){ //根號
+        answer="";
+        double temp=tonumber(Cnum,counter);
+        double re=Math.pow(temp,0.5);
+        answer=Float.toString((float)re)+" End";
+        counter=0;
+    }
+
+%> 
+</body>
+</html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>calculator</title>
+    <style>
+        table,input{
+            width:50px;
+            height:50px;
+            font-size: 15px;
+            background-color:rgb(245,245,245);
+            
+        }
+        #outcomelab{
+            width:200px;
+            height:60px;
+            font-size: 20px;
+            colspan="4";
+            border-width:2px;
+            border-style: solid;
+            text-align:right;
+        }
+        table{
+            margin:auto;
+            border-width:2px;
+            border-style: solid;
+        }
+    </style>
+</head>
+<body>
+    <form method=post action="cal-110816002.jsp">
+        <table>
+            <tr>
+                <td colspan="4" id="outcomelab"><%=answer %></td>
+            </tr>
+            <tr>
+                <td><INPUT type=submit name="op" value="%" ></td>
+                <td><INPUT type=submit name="op" value="CE" ></td>
+                <td><INPUT type=submit name="op" value="C" ></td>
+                <td><INPUT type=submit name="op" value="Del" ></td>
+            </tr>
+            <tr>
+                <td><INPUT type=submit name="op" value="1/x" ></td>
+                <td><INPUT type=submit name="op" value="x^2" ></td>
+                <td><INPUT type=submit name="op" value="root" ></td>
+                <td><INPUT type=submit name="op" value="/" ></td>
+            </tr>
+            <tr>
+                <td><INPUT type=submit name="n" value="9" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="n" value="8" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="n" value="7" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="op" value="*" ></td>
+            </tr>
+            <tr>
+                <td><INPUT type=submit name="n" value="6" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="n" value="5" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="n" value="4" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="op" value="-" ></td>
+            </tr>
+            <tr>
+                <td><INPUT type=submit name="n" value="3" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="n" value="2" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="n" value="1" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="op" value="+" ></td>
+            </tr>
+            <tr>
+                <td><INPUT type=submit name="x" value=" " style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="n" value="0" style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="op" value="." style="background-color:rgb(255,252,250);"></td>
+                <td><INPUT type=submit name="op" value="=" style=" background-color:rgb(122,184,204);"></td>
+            </tr>
+        </table>
+    </form>    
+</body>
+</html>
